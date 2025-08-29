@@ -11,9 +11,7 @@ import {
   MessageSquare,
   Menu,
   X,
-  Leaf,
-  EyeOff,
-  Eye
+  Leaf
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,7 +32,6 @@ const navigation = [
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isNavVisible, setIsNavVisible] = useState(true);
   const [isNavbarHidden, setIsNavbarHidden] = useState(false);
   const [isPromptDismissed, setIsPromptDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -128,30 +125,25 @@ export function Navigation() {
       <div className={`hidden md:block fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300 ${
         isNavbarHidden ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}>
-        {isNavVisible && (
-          <Card className="bg-card/95 backdrop-blur-lg shadow-[var(--shadow-strong)] border-primary/20">
-            <div className="flex items-center p-3 space-x-1">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth hover:bg-accent/50 ${
-                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{t(item.name)}</span>
-                  </Link>
-                );
-              })}
-              <Button variant="ghost" size="icon" onClick={() => setIsNavVisible(false)}>
-                <EyeOff className="h-5 w-5" />
-              </Button>
-            </div>
-          </Card>
-        )}
+        <Card className="bg-card/95 backdrop-blur-lg shadow-[var(--shadow-strong)] border-primary/20">
+          <div className="flex items-center p-3 space-x-1">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth hover:bg-accent/50 ${
+                    isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-medium">{t(item.name)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </Card>
       </div>
 
       {/* Scroll Up Prompt for Bottom Navbar */}
@@ -175,27 +167,6 @@ export function Navigation() {
         </div>
       )}
 
-      {/* Show Navigation Button - Top Right Corner */}
-      {!isNavVisible && (
-        <div className="hidden md:block fixed top-20 right-6 z-50">
-          <div className="flex flex-col items-end space-y-2">
-            <div className="bg-card/95 backdrop-blur-lg shadow-[var(--shadow-strong)] border border-primary/20 rounded-lg px-3 py-2 max-w-48">
-              <p className="text-xs text-muted-foreground text-right">
-                {t('navbarHidden')}
-              </p>
-            </div>
-            <Button 
-              variant="secondary" 
-              size="icon" 
-              onClick={() => setIsNavVisible(true)}
-              title={t('showNavbar')}
-              className="shadow-lg"
-            >
-              <Eye className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
