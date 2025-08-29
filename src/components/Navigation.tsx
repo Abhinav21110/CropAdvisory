@@ -11,7 +11,9 @@ import {
   MessageSquare,
   Menu,
   X,
-  Leaf
+  Leaf,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,6 +35,7 @@ const navigation = [
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNavbarHidden, setIsNavbarHidden] = useState(false);
+  const [isNavbarManuallyHidden, setIsNavbarManuallyHidden] = useState(false);
   const [isPromptDismissed, setIsPromptDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
@@ -42,15 +45,17 @@ export function Navigation() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // Hide navbar when scrolling down, show when scrolling up
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down and past 100px
-        setIsNavbarHidden(true);
-        setIsPromptDismissed(false); // Reset prompt when navbar hides
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling up
-        setIsNavbarHidden(false);
-        setIsPromptDismissed(false); // Reset prompt when navbar shows
+      // Hide navbar when scrolling down, show when scrolling up (only if not manually hidden)
+      if (!isNavbarManuallyHidden) {
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+          // Scrolling down and past 100px
+          setIsNavbarHidden(true);
+          setIsPromptDismissed(false); // Reset prompt when navbar hides
+        } else if (currentScrollY < lastScrollY) {
+          // Scrolling up
+          setIsNavbarHidden(false);
+          setIsPromptDismissed(false); // Reset prompt when navbar shows
+        }
       }
       
       setLastScrollY(currentScrollY);
@@ -58,7 +63,7 @@ export function Navigation() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, isNavbarManuallyHidden]);
 
   return (
     <div>
@@ -123,7 +128,7 @@ export function Navigation() {
 
       {/* Desktop Navigation - Floating */}
       <div className={`hidden md:block fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300 ${
-        isNavbarHidden ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+        isNavbarHidden || isNavbarManuallyHidden ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}>
         <Card className="bg-card/95 backdrop-blur-lg shadow-[var(--shadow-strong)] border-primary/20">
           <div className="flex items-center p-3 space-x-1">
@@ -142,28 +147,40 @@ export function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* Hide/Show Toggle Button */}
+            <div className="border-l border-border/50 pl-2 ml-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsNavbarManuallyHidden(true);
+                  setIsNavbarHidden(true);
+                }}
+                className="h-10 w-10 hover:bg-accent/50"
+                title="Hide navigation"
+              >
+                <EyeOff className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
 
-      {/* Scroll Up Prompt for Bottom Navbar */}
-      {isNavbarHidden && !isPromptDismissed && (
-        <div className="hidden md:block fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30">
-          <div className="bg-card/95 backdrop-blur-lg shadow-lg border border-primary/20 rounded-lg px-4 py-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex items-center space-x-3">
-              <p className="text-sm text-muted-foreground">
-                Scroll up to show navbar
-              </p>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 hover:bg-accent/50"
-                onClick={() => setIsPromptDismissed(true)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+      {/* Show Navbar Button when hidden */}
+      {(isNavbarHidden || isNavbarManuallyHidden) && (
+        <div className="hidden md:block fixed bottom-4 right-4 z-30">
+          <Button
+            onClick={() => {
+              setIsNavbarManuallyHidden(false);
+              setIsNavbarHidden(false);
+              setIsPromptDismissed(true);
+            }}
+            className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
+            title="Show navigation"
+          >
+            <Eye className="h-5 w-5 text-primary-foreground" />
+          </Button>
         </div>
       )}
 
