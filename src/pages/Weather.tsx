@@ -1,25 +1,108 @@
-import { useState } from "react";
-import { CloudRain, Sun, Wind, Droplets, Thermometer, Eye, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { CloudRain, Sun, Wind, Droplets, Thermometer, Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { weatherData } from "@/data/sampleData";
+import { getCurrentWeather, getWeatherForecast, getAllLocationsWeather, WeatherData, ForecastData } from "@/services/weatherService";
 
 export default function Weather() {
   const [selectedLocation, setSelectedLocation] = useState("Punjab");
-  
-  const currentWeather = weatherData.find(
-    weather => weather.location === selectedLocation
-  ) || weatherData[0];
+  const [currentWeather, setCurrentWeather] = useState<WeatherData | null>(null);
+  const [allWeatherData, setAllWeatherData] = useState<WeatherData[]>([]);
+  const [forecastData, setForecastData] = useState<ForecastData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const locations = [...new Set(weatherData.map(item => item.location))];
+  const locations = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", 
+    "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", 
+    "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", 
+    "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", 
+    "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", 
+    "Ladakh", "Chandigarh", "Puducherry", "Andaman and Nicobar Islands", 
+    "Lakshadweep", "Dadra and Nagar Haveli and Daman and Diu"
+  ];
+
+  const loadWeatherData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [current, all] = await Promise.all([
+        getCurrentWeather(selectedLocation),
+        getAllLocationsWeather()
+      ]);
+      setCurrentWeather(current);
+      setAllWeatherData(all);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load weather data');
+      console.error('Weather data error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    loadWeatherData();
+  }, [loadWeatherData]);
+
+  useEffect(() => {
+    if (selectedLocation && !loading) {
+      loadCurrentWeather(selectedLocation);
+      loadForecast(selectedLocation);
+    }
+  }, [selectedLocation, loading]);
+
+  const loadCurrentWeather = async (location: string) => {
+    try {
+      const weather = await getCurrentWeather(location);
+      setCurrentWeather(weather);
+    } catch (err) {
+      console.error('Current weather error:', err);
+    }
+  };
+
+  const loadForecast = async (location: string) => {
+    try {
+      const forecast = await getWeatherForecast(location);
+      setForecastData(forecast);
+    } catch (err) {
+      console.error('Forecast error:', err);
+    }
+  };
 
   const getWeatherIcon = (temp: number, rainfall: number) => {
     if (rainfall > 5) return CloudRain;
     if (temp > 30) return Sun;
     return Sun;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading weather data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !currentWeather) {
+    return (
+      <div className="text-center space-y-4 p-8">
+        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+        <h2 className="text-xl font-semibold">Weather Data Unavailable</h2>
+        <p className="text-muted-foreground">{error || 'Unable to load weather information'}</p>
+        <button 
+          onClick={loadWeatherData}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   const getWeatherStatus = (temp: number, rainfall: number, humidity: number) => {
     if (rainfall > 5) return { status: "Rainy", color: "bg-blue-500", description: "Heavy rainfall expected" };
@@ -112,7 +195,7 @@ export default function Weather() {
             <div className="text-center">
               <Wind className="h-8 w-8 mx-auto mb-2 opacity-80" />
               <div className="text-3xl font-bold font-heading mb-1">
-                12km/h
+                {currentWeather.windSpeed}km/h
               </div>
               <div className="text-sm opacity-90">Wind Speed</div>
             </div>
@@ -226,11 +309,8 @@ export default function Weather() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-            {Array.from({ length: 7 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() + i);
-              const temp = currentWeather.temperature + Math.floor(Math.random() * 6) - 3;
-              const rain = Math.random() * 10;
+            {forecastData.length > 0 ? forecastData.map((forecast, i) => {
+              const date = new Date(forecast.date);
               
               return (
                 <div key={i} className="text-center p-4 border rounded-lg hover:bg-muted transition-smooth">
@@ -238,17 +318,41 @@ export default function Weather() {
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                   </div>
                   <div className="mb-2">
-                    {rain > 5 ? (
+                    {forecast.rainfall > 5 ? (
                       <CloudRain className="h-6 w-6 text-blue-500 mx-auto" />
                     ) : (
                       <Sun className="h-6 w-6 text-yellow-500 mx-auto" />
                     )}
                   </div>
-                  <div className="text-sm font-medium">{temp}°C</div>
-                  <div className="text-xs text-muted-foreground">{rain.toFixed(1)}mm</div>
+                  <div className="text-sm font-medium">{forecast.temperature}°C</div>
+                  <div className="text-xs text-muted-foreground">{forecast.rainfall.toFixed(1)}mm</div>
                 </div>
               );
-            })}
+            }) : (
+              Array.from({ length: 7 }, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const temp = currentWeather.temperature + Math.floor(Math.random() * 6) - 3;
+                const rain = Math.random() * 10;
+                
+                return (
+                  <div key={i} className="text-center p-4 border rounded-lg hover:bg-muted transition-smooth">
+                    <div className="text-xs text-muted-foreground mb-2">
+                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    </div>
+                    <div className="mb-2">
+                      {rain > 5 ? (
+                        <CloudRain className="h-6 w-6 text-blue-500 mx-auto" />
+                      ) : (
+                        <Sun className="h-6 w-6 text-yellow-500 mx-auto" />
+                      )}
+                    </div>
+                    <div className="text-sm font-medium">{temp}°C</div>
+                    <div className="text-xs text-muted-foreground">{rain.toFixed(1)}mm</div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -260,7 +364,7 @@ export default function Weather() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {weatherData.map((weather) => {
+            {allWeatherData.map((weather) => {
               const Icon = getWeatherIcon(weather.temperature, weather.rainfall);
               const status = getWeatherStatus(weather.temperature, weather.rainfall, weather.humidity);
               
@@ -287,7 +391,7 @@ export default function Weather() {
                         <div className="text-xs text-muted-foreground">Temp</div>
                       </div>
                       <div>
-                        <div className="font-medium">{weather.rainfall}mm</div>
+                        <div className="font-medium">{weather.rainfall.toFixed(1)}mm</div>
                         <div className="text-xs text-muted-foreground">Rain</div>
                       </div>
                       <div>
